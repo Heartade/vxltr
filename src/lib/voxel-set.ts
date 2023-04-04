@@ -64,6 +64,7 @@ export class Voxel {
     );
     this._mesh.position = this._position;
     this._mesh.setEnabled(false);
+    
     let temp = Math.floor(
       (64 * (p.x * MAP_SIZE * MAP_SIZE + p.y * MAP_SIZE + p.z)) /
         (MAP_SIZE * MAP_SIZE * MAP_SIZE)
@@ -104,7 +105,6 @@ export class VoxelIndex {
   }
   onSetEnable(v: Voxel) {
     let pos = v.position.asArray();
-    // console.log(`setEnable [${pos.join(',')}]`);
     [0, 1, 2].forEach((i) => {
       [-1, 1].forEach((j) => {
         let adjPos = [...pos];
@@ -116,18 +116,15 @@ export class VoxelIndex {
   }
   checkOccluded(v: Voxel) {
     let pos = v.position.asArray();
-    // console.log(`checkOccluded [${pos.join(',')}]`)
     let occluded = [0, 1, 2].every((i) => {
       return [-1, 1].every((j) => {
         let adjPos = [...pos];
         adjPos[i] += j;
         let enabled =
           this._voxels[adjPos[0]]?.[adjPos[1]]?.[adjPos[2]]?.enabled ?? false;
-        // console.log(`checkOccluded [${pos.join(',')}] ... [${adjPos.join(',')}] ... ${enabled}`)
         return enabled;
       });
     });
-    // console.log(`${occluded ? 'occluded' : 'visible'}`)
     v.setOccluded(occluded);
   }
 
@@ -159,6 +156,5 @@ export class VoxelIndex {
           )
       );
     this._voxels.flat(2).forEach((v) => v.setEnabled(true));
-    console.log(this._voxels.flat(2).reduce((v, i) => v + i.visible, 0));
   }
 }

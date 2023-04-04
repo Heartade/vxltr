@@ -4,6 +4,7 @@
 	import { onMount } from 'svelte';
 	import * as BABYLON from 'babylonjs';
     import { VoxelIndex, MAP_SIZE } from '$lib/voxel-set';
+	import Toolbox from './Toolbox.svelte';
 
 	let canvas: HTMLCanvasElement;
 	let engine: BABYLON.Engine;
@@ -12,6 +13,7 @@
 	let light: BABYLON.HemisphericLight;
 	let voxels: VoxelIndex;
 
+	let pointerDown = [];
 	onMount(() => {
 		engine = new BABYLON.Engine(canvas, true);
 		scene = new BABYLON.Scene(engine);
@@ -25,6 +27,23 @@
 			scene.render();
 		});
 
+		scene.onPointerObservable.add((pointerInfo) => {
+			switch (pointerInfo.type) {
+				case BABYLON.PointerEventTypes.POINTERDOWN:
+
+					console.log(pointerInfo.event.button)
+					pointerDown.push(pointerInfo.event.button);
+					break;
+				case BABYLON.PointerEventTypes.POINTERUP:
+				console.log(pointerInfo.event.button)
+					pointerDown = pointerDown.filter((button) => button !== pointerInfo.event.button);
+					break;
+				case BABYLON.PointerEventTypes.POINTERMOVE:
+				
+					break;
+			}
+		});
+
 		window.addEventListener('resize', () => {
 			engine.resize();
 		});
@@ -33,54 +52,12 @@
 
 <svelte:head>
 	<title>Home</title>
-	<meta name="description" content="Svelte demo app" />
+	<meta name="description" content="vxltr. a web-based voxel art creator" />
 </svelte:head>
 
-<section>
-	<!-- <h1>
-		<span class="welcome">
-			<picture>
-				<source srcset={welcome} type="image/webp" />
-				<img src={welcome_fallback} alt="Welcome" />
-			</picture>
-		</span>
-
-		to your new<br />SvelteKit app
-	</h1> -->
-	<canvas class="main-scene" bind:this={canvas} />
+<section class="flex grow flex-col">
+	<Toolbox/>
+	<canvas class="w-full flex grow" bind:this={canvas} />
 </section>
-
 <style>
-	.main-scene {
-		width: 100%;
-		height: 100%;
-	}
-
-	section {
-		display: flex;
-		flex-direction: column;
-		justify-content: center;
-		align-items: center;
-		flex: 0.6;
-	}
-
-	h1 {
-		width: 100%;
-	}
-
-	.welcome {
-		display: block;
-		position: relative;
-		width: 100%;
-		height: 0;
-		padding: 0 0 calc(100% * 495 / 2048) 0;
-	}
-
-	.welcome img {
-		position: absolute;
-		width: 100%;
-		height: 100%;
-		top: 0;
-		display: block;
-	}
 </style>
