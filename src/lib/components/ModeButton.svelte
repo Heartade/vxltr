@@ -10,7 +10,7 @@
 
 <button
   data-selected={selected}
-  class="rounded-lg data-[selected=true]:bg-blue-500 tracking-wider data-[selected=true]:text-white data-[selected=true]:font-medium font-medium text-blue-500 data-[selected=true]:hover:bg-blue-400 hover:bg-blue-100 border-2 border-blue-500 bg-white py-1 px-2"
+  class="rounded-lg data-[selected=true]:bg-orange-500 tracking-wider data-[selected=true]:text-white data-[selected=true]:font-medium font-medium text-orange-500 data-[selected=true]:hover:bg-orange-400 hover:bg-orange-100 border-2 border-orange-500 bg-white py-1 px-2"
   on:click={() => {
     dispatch("click");
   }}
