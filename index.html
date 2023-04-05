@@ -2,31 +2,32 @@
 <html lang="en">
 	<head>
 		<meta charset="utf-8" />
-		<link rel="icon" href="./favicon.png" />
+		<link rel="icon" href="./vxltr/favicon.png" />
 		<meta name="viewport" content="width=device-width" />
 		<meta http-equiv="content-security-policy" content="">
-		<link rel="modulepreload" href="./_app/immutable/entry/start.3ff27dc4.js">
-		<link rel="modulepreload" href="./_app/immutable/chunks/index.ee4ae97c.js">
-		<link rel="modulepreload" href="./_app/immutable/chunks/singletons.69a349ce.js">
-		<link rel="modulepreload" href="./_app/immutable/chunks/index.7e24fd4e.js">
-		<link rel="modulepreload" href="./_app/immutable/chunks/paths.95a4537a.js">
-		<link rel="modulepreload" href="./_app/immutable/entry/app.79cd314f.js">
+		<link rel="modulepreload" href="./vxltr/_app/immutable/entry/start.cf5cab3c.js">
+		<link rel="modulepreload" href="./vxltr/_app/immutable/chunks/index.ee4ae97c.js">
+		<link rel="modulepreload" href="./vxltr/_app/immutable/chunks/singletons.af18ef15.js">
+		<link rel="modulepreload" href="./vxltr/_app/immutable/chunks/index.7e24fd4e.js">
+		<link rel="modulepreload" href="./vxltr/_app/immutable/chunks/paths.94e263ce.js">
+		<link rel="modulepreload" href="./vxltr/_app/immutable/entry/app.a127c975.js">
 	</head>
 	<body data-sveltekit-preload-data="hover">
 		<div style="display: contents">
 			<script>
 				{
-					__sveltekit_qphoqf = {
+					__sveltekit_xey7qq = {
 						env: {},
-						base: new URL(".", location).pathname.slice(0, -1),
+						assets: "/vxltr",
+						base: new URL("./vxltr", location).pathname,
 						element: document.currentScript.parentElement
 					};
 
 					Promise.all([
-						import("./_app/immutable/entry/start.3ff27dc4.js"),
-						import("./_app/immutable/entry/app.79cd314f.js")
+						import("./vxltr/_app/immutable/entry/start.cf5cab3c.js"),
+						import("./vxltr/_app/immutable/entry/app.a127c975.js")
 					]).then(([kit, app]) => {
-						kit.start(app, __sveltekit_qphoqf.element);
+						kit.start(app, __sveltekit_xey7qq.element);
 					});
 				}
 			</script>
