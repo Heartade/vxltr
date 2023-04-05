@@ -4,7 +4,7 @@ import type { Mode, Tool } from "../routes/store";
 
 //new BABYLON.StandardMaterial('voxel')
 //MATERIAL.diffuseColor = new BABYLON.Color3(0.5, 0.5, 0.5)
-export const MAP_SIZE = 16;
+export const MAP_SIZE = 24;
 
 export class Voxel {
   private _id: string;
