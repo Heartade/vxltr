@@ -4,11 +4,16 @@ import type { Mode, Tool } from "../../routes/store";
 import { MAP_SIZE } from "./Config";
 import { Wall } from "./Wall";
 import type { SceneManager } from "$lib/scene/InitScene";
+import * as VectorUtils from "$lib/utils/VectorUtils";
 
 export class VoxelIndex {
   private _voxels: Voxel[][][];
 
+  private _gridTexture: BABYLON.Texture;
+  private _filledGridTexture: BABYLON.Texture;
+  private _dragMeshMaterial: BABYLON.StandardMaterial;
   private _materials: BABYLON.StandardMaterial[];
+  private _transparentMaterials: BABYLON.StandardMaterial[];
   get materials() {
     return [...this._materials];
   }
@@ -73,6 +78,11 @@ export class VoxelIndex {
   }
   setMaterialId(id: number) {
     this._materialId = id;
+  }
+  setShowTarget(show: boolean) {
+    this._testModel.forEach((v) => {
+      v.setEnabled(show);
+    });
   }
 
   inputCache: BABYLON.Vector2[] = [];
@@ -153,38 +163,65 @@ export class VoxelIndex {
     }
   }
 
+  checkVoxelIsInTestModel(v: Voxel) {
+    const checkSingle = (x: number, v: Voxel) => {
+      let c = Math.floor((MAP_SIZE - 1) / 2);
+      let pos = new BABYLON.Vector3(x / 2 + c + 0.5, MAP_SIZE - x - 2, x / 2);
+      let size = new BABYLON.Vector3(MAP_SIZE - x - 2, 1, x + 1);
+      return VectorUtils.betweenVector(
+        pos.subtract(size.scale(0.5)),
+        pos.add(size.scale(0.5)),
+        v.position
+      );
+    };
+    return this._testModel.some((_, x) => checkSingle(x, v));
+  }
+
+  checkTestModel() {
+    let map = this._voxels
+      .flat(2)
+      .map((v) => v.enabled === this.checkVoxelIsInTestModel(v));
+    console.log(map.filter((v) => v).length, map.length);
+    return this._voxels
+      .flat(2)
+      .every((v) => v.enabled === this.checkVoxelIsInTestModel(v));
+  }
+
   private _dragInfo: [BABYLON.Vector3, BABYLON.Vector3] | null = null;
   private _dragMesh: BABYLON.Mesh | null = null;
 
+  private _testModel: BABYLON.Mesh[] = [];
+
   private drawDragMesh() {
-    console.log("drawDragMesh");
+    const createMesh = (dragInfo: [BABYLON.Vector3, BABYLON.Vector3]) => {
+      const scaling = new BABYLON.Vector3(
+        Math.abs(dragInfo[0].x - dragInfo[1].x) + 1,
+        Math.abs(dragInfo[0].y - dragInfo[1].y) + 1,
+        Math.abs(dragInfo[0].z - dragInfo[1].z) + 1
+      );
+      const mesh = BABYLON.MeshBuilder.CreateTiledBox(
+        "dragMesh",
+        {
+          width: scaling.x,
+          height: scaling.y,
+          depth: scaling.z,
+          tileSize: 1,
+          updatable: true,
+        },
+        this._sceneManager.scene
+      );
+      mesh.isPickable = false;
+      mesh.position = dragInfo[0].add(dragInfo[1]).scale(0.5);
+      mesh.renderingGroupId = 1;
+      mesh.material = this._dragMeshMaterial;
+      return mesh;
+    };
     if (this._dragInfo) {
-      if (this._dragMesh) {
-        this._dragMesh.scaling = new BABYLON.Vector3(
-          Math.abs(this._dragInfo[0].x - this._dragInfo[1].x) + 1,
-          Math.abs(this._dragInfo[0].y - this._dragInfo[1].y) + 1,
-          Math.abs(this._dragInfo[0].z - this._dragInfo[1].z) + 1
-        );
-        this._dragMesh.position = this._dragInfo[0]
-          .add(this._dragInfo[1])
-          .scale(0.5);
-      } else {
-        this._dragMesh = BABYLON.MeshBuilder.CreateBox(
-          "dragMesh",
-          {
-            width: 1,
-            height: 1,
-            depth: 1,
-          },
-          this._sceneManager.scene
-        );
-        this._dragMesh.isPickable = false;
-        this._dragMesh.position = this._dragInfo[0]
-          .add(this._dragInfo[1])
-          .scale(0.5);
-      }
+      this._dragMesh?.dispose();
+      this._dragMesh = createMesh(this._dragInfo);
     }
   }
+
   onPointer(e: BABYLON.PointerInfo) {
     let event = e.event as BABYLON.IPointerEvent;
     switch (e.type) {
@@ -196,21 +233,22 @@ export class VoxelIndex {
         this.pointerDown[event.pointerId ?? 0] = true;
         if (this._isDragEnabled) {
           if (e.pickInfo) {
-            const point = e.pickInfo.pickedPoint;
+            const voxel = this.findVoxelFromPick(e.pickInfo);
+            const point =
+              this.tool === "REMOVE" && voxel
+                ? voxel?.position
+                : e.pickInfo.pickedPoint;
             if (point) {
+              this.materials[this.materialId].opacityTexture =
+                this._filledGridTexture;
               this._sceneManager.enableCameraMove(false);
-              const rounded_point = new BABYLON.Vector3(
-                Math.round(point.x),
-                Math.round(point.y),
-                Math.round(point.z)
+              const rounded_point = VectorUtils.clipVector(
+                0,
+                MAP_SIZE - 1,
+                VectorUtils.roundVector(point)
               );
               this._dragInfo = [rounded_point, rounded_point];
               this.drawDragMesh();
-              console.log([
-                Math.round(point.x),
-                Math.round(point.y),
-                Math.round(point.z),
-              ]);
             }
           }
         } else {
@@ -221,106 +259,128 @@ export class VoxelIndex {
         break;
       case BABYLON.PointerEventTypes.POINTERUP:
         console.log(this.inputCache[event.pointerId ?? 0]);
-        let isTouch = this.inputCache[event.pointerId ?? 0]?.length() < 10;
+        let isTouch = this.inputCache[event.pointerId ?? 0]?.length() < 30;
         this.pointerDown[event.pointerId ?? 0] = false;
         if (this._isDragEnabled) {
+          this.materials[this.materialId].opacityTexture = null;
           this._sceneManager.enableCameraMove(true);
           if (e.pickInfo) {
-            const point = e.pickInfo.pickedPoint;
+            const voxel = this.findVoxelFromPick(e.pickInfo);
+            const point =
+              this.tool === "REMOVE" && voxel
+                ? voxel?.position
+                : e.pickInfo.pickedPoint;
             this._dragMesh?.dispose();
             this._dragMesh = null;
             if (point) {
-              const roundedPoint = new BABYLON.Vector3(
-                Math.round(point.x),
-                Math.round(point.y),
-                Math.round(point.z)
+              const roundedPoint = VectorUtils.clipVector(
+                0,
+                MAP_SIZE - 1,
+                VectorUtils.roundVector(point)
               );
-              this._dragInfo = [
-                this._dragInfo?.[0] ?? roundedPoint,
-                roundedPoint,
-              ];
-              const pointStart = new BABYLON.Vector3(
-                Math.min(this._dragInfo[0].x, this._dragInfo[1].x),
-                Math.min(this._dragInfo[0].y, this._dragInfo[1].y),
-                Math.min(this._dragInfo[0].z, this._dragInfo[1].z)
-              );
-              const pointEnd = new BABYLON.Vector3(
-                Math.max(this._dragInfo[0].x, this._dragInfo[1].x) + 1,
-                Math.max(this._dragInfo[0].y, this._dragInfo[1].y) + 1,
-                Math.max(this._dragInfo[0].z, this._dragInfo[1].z) + 1
-              );
-              if (this._tool === "ADD") {
-                this.enableBox(pointStart, pointEnd);
+              if (!isTouch && this._dragInfo) {
+                this._dragInfo = [this._dragInfo[0], roundedPoint];
+                const pointStart = VectorUtils.minVector(
+                  this._dragInfo[0],
+                  this._dragInfo[1]
+                );
+                const pointEnd = VectorUtils.maxVector(
+                  this._dragInfo[0],
+                  this._dragInfo[1]
+                ).add(BABYLON.Vector3.One());
+
+                if (this._tool === "ADD") {
+                  this.enableBox(pointStart, pointEnd);
+                }
+                if (this._tool === "REMOVE") {
+                  this.disableBox(pointStart, pointEnd);
+                }
               }
-              if (this._tool === "REMOVE") {
-                this.disableBox(pointStart, pointEnd);
-              }
-              console.log([
-                Math.round(point.x),
-                Math.round(point.y),
-                Math.round(point.z),
-              ]);
-              this._dragInfo = null;
             }
           }
+          this._dragInfo = null;
         } else {
           if (e.pickInfo) {
             let pickInfo: BABYLON.PickingInfo = e.pickInfo;
             if (isTouch) {
+              let pickedPoint = e.pickInfo.pickedPoint;
               let voxel = this.findVoxelFromPick(pickInfo);
-              if (!voxel) return;
-              let pos = voxel.position;
-              let axis = this.findAxisFromPick(voxel, pickInfo);
-              if (!axis) return;
-              else {
-                let face =
-                  this._mode === "FACE"
-                    ? this.findFace(voxel, new BABYLON.Vector3(...axis))
-                    : [voxel];
-                if (this.tool == "ADD") {
-                  let add = face.map(
-                    ((axis) => (v) => {
-                      let pos = v.position;
-                      return this._voxels[pos.x + axis[0]]?.[pos.y + axis[1]]?.[
-                        pos.z + axis[2]
-                      ];
-                    })(axis)
+              if (!voxel) {
+                if (pickedPoint && this.tool == "ADD") {
+                  let pos = VectorUtils.clipVector(
+                    0,
+                    MAP_SIZE - 1,
+                    VectorUtils.roundVector(pickedPoint)
                   );
-                  add.forEach((v) => {
+                  let v = this._voxels[pos.x]?.[pos.y]?.[pos.z];
+                  if (v) {
                     v.setEnabled(true);
                     v.setMaterial(this.materialId);
-                  });
-                } else if (this.tool == "REMOVE") {
-                  face.forEach((v) => v.setEnabled(false));
-                } else if (this.tool == "PAINT") {
-                  face.forEach((v) => v.setMaterial(this.materialId));
+                  }
+                }
+              } else {
+                let axis = this.findAxisFromPick(voxel, pickInfo);
+                if (!axis) return;
+                else {
+                  let face =
+                    this._mode === "FACE"
+                      ? this.findFace(voxel, new BABYLON.Vector3(...axis))
+                      : [voxel];
+                  if (this.tool == "ADD") {
+                    let add = face.map(
+                      ((axis) => (v) => {
+                        let pos = v.position;
+                        return this._voxels[pos.x + axis[0]]?.[
+                          pos.y + axis[1]
+                        ]?.[pos.z + axis[2]];
+                      })(axis)
+                    );
+                    add.forEach((v) => {
+                      v.setEnabled(true);
+                      v.setMaterial(this.materialId);
+                    });
+                  } else if (this.tool == "REMOVE") {
+                    face.forEach((v) => v.setEnabled(false));
+                  } else if (this.tool == "PAINT") {
+                    face.forEach((v) => v.setMaterial(this.materialId));
+                  }
                 }
               }
             }
           }
         }
+        console.log(this.checkTestModel());
         break;
       case BABYLON.PointerEventTypes.POINTERMOVE:
         if (this.pointerDown[event.pointerId ?? 0]) {
           this.inputCache[event.pointerId ?? 0] = this.inputCache[
             event.pointerId ?? 0
-          ].add(new BABYLON.Vector2(event.movementX, event.movementY));
-          if (this.inputCache[event.pointerId ?? 0].length() > 100) {
+          ].add(
+            new BABYLON.Vector2(
+              Math.abs(event.movementX),
+              Math.abs(event.movementY)
+            )
+          );
+          if (this.inputCache[event.pointerId ?? 0].length() > 30) {
             console.log("registered!");
             if (this._isDragEnabled) {
               const pickInfo = this._scene.pick(
                 this._scene.pointerX,
                 this._scene.pointerY
               );
-              if (pickInfo) {
+              if (this._dragInfo && pickInfo) {
                 console.log("dragging");
-                const point = pickInfo.pickedPoint;
+                const voxel = this.findVoxelFromPick(pickInfo);
+                const point =
+                  this.tool === "REMOVE" && voxel
+                    ? voxel?.position
+                    : pickInfo.pickedPoint;
                 console.log(point);
                 if (point) {
-                  const roundedPoint = new BABYLON.Vector3(
-                    Math.round(point.x),
-                    Math.round(point.y),
-                    Math.round(point.z)
+                  const roundedPoint = VectorUtils.clipVector(
+                    0,
+                    MAP_SIZE - 1,
+                    VectorUtils.roundVector(point)
                   );
                   this._dragInfo = [
                     this._dragInfo?.[0] ?? roundedPoint,
@@ -371,8 +431,9 @@ export class VoxelIndex {
       ],
     ];
     let mat = new BABYLON.PBRMaterial("wall", this._scene);
-    mat.alpha = 0.15;
+    mat.alpha = 0.1;
     mat.unlit = true;
+    mat.opacityTexture = this._gridTexture;
     return posrot.map(([pos, rot]) => new Wall(this, pos, rot, mat));
   }
 
@@ -380,6 +441,25 @@ export class VoxelIndex {
     this._sceneManager = sceneManager;
     this._scene = sceneManager.scene;
     this._isDragEnabled = isDragEnabled;
+    this._dragMeshMaterial = new BABYLON.StandardMaterial(
+      "drag-mesh-material",
+      this._scene
+    );
+    //this._dragMeshMaterial.backFaceCulling = false;
+    this._gridTexture = new BABYLON.Texture(
+      "texture/grid_filled.png",
+      this.scene
+    );
+    this._gridTexture.uScale = MAP_SIZE;
+    this._gridTexture.vScale = MAP_SIZE;
+    this._filledGridTexture = new BABYLON.Texture(
+      "texture/grid_filled.png",
+      this.scene
+    );
+    this._dragMeshMaterial.opacityTexture = this._filledGridTexture;
+    this._dragMeshMaterial.diffuseColor = new BABYLON.Color3(1, 1, 1);
+    this._dragMeshMaterial.emissiveColor = new BABYLON.Color3(1, 1, 1);
+    this._dragMeshMaterial.alpha = 0.25;
     this._materials = [0, 1, 2, 3]
       .map((r, i) =>
         [0, 1, 2, 3].map((g, j) =>
@@ -395,6 +475,11 @@ export class VoxelIndex {
         )
       )
       .flat(2);
+    this._transparentMaterials = this._materials.map((m) => {
+      let n = m.clone(`transparent-${m.name}`) as BABYLON.StandardMaterial;
+      n.opacityTexture = this._filledGridTexture;
+      return n;
+    });
     this._voxels = new Array(MAP_SIZE)
       .fill(0)
       .map((_, x) =>
@@ -406,12 +491,39 @@ export class VoxelIndex {
               .map((_, z) => new Voxel(new BABYLON.Vector3(x, y, z), this))
           )
       );
-    // this._voxels.flat(2).forEach((v) => v.setEnabled(true));
+    this._voxels.flat(2).forEach((v) => v.setMaterial(this.materialId));
     let c = Math.floor((MAP_SIZE - 1) / 2);
-    this.enableBox(
-      new BABYLON.Vector3(c, c, c),
-      new BABYLON.Vector3(c + 2, c + 2, c + 2)
+    const testModelMaterial = new BABYLON.StandardMaterial(
+      "test-model-material",
+      this._scene
     );
+    testModelMaterial.diffuseColor = new BABYLON.Color3(0.3, 1, 0.5);
+    testModelMaterial.emissiveColor = new BABYLON.Color3(0.15, 0.15, 0.15);
+    testModelMaterial.alpha = 0.5;
+    // testModelMaterial.opacityTexture = this._filledGridTexture;
+    this._testModel = new Array(MAP_SIZE - 2).fill(0).map((_, x) => {
+      const mesh = BABYLON.MeshBuilder.CreateTiledBox(`test-model-${x}`, {
+        width: MAP_SIZE - x - 1.99,
+        height: 1.01,
+        depth: x + 1.01,
+        tileSize: 1,
+      });
+      mesh.isPickable = false;
+      mesh.position = new BABYLON.Vector3(
+        x / 2 + c + 0.5,
+        MAP_SIZE - x - 2,
+        x / 2
+      );
+      // mesh.renderingGroupId = 2;
+      mesh.material = testModelMaterial;
+      return mesh;
+    });
+    if (!isDragEnabled) {
+      this.enableBox(
+        new BABYLON.Vector3(c, c, c),
+        new BABYLON.Vector3(c + 2, c + 2, c + 2)
+      );
+    }
     this._walls = this._initWalls();
 
     this._scene.onPointerObservable.add(this.onPointer.bind(this));

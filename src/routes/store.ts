@@ -4,7 +4,8 @@ export type Tool = "ADD" | "REMOVE" | "EXTRUDE" | "PAINT";
 export let tool = writable<Tool>("ADD");
 export type Mode = "POINT" | "FACE"
 export let mode = writable<Mode>("POINT");
-
+export let drag = writable<boolean>(false);
+export let showTarget = writable<boolean>(true);
 export const COLORS = [0, 1, 2, 3]
   .map((r) =>
     [0, 1, 2, 3].map((g) =>

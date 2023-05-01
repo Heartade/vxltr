@@ -23,7 +23,7 @@ export class SceneManager {
     else this._camera.detachControl();
   }
 
-  constructor(canvas: HTMLCanvasElement) {
+  constructor(canvas: HTMLCanvasElement, isDragMode: boolean) {
     this._canvas = canvas;
     this._engine = new BABYLON.Engine(canvas, true);
     this._scene = new BABYLON.Scene(this._engine);
@@ -46,7 +46,7 @@ export class SceneManager {
       new BABYLON.Vector3(1, 3, 2),
       this._scene
     );
-    this._voxels = new VoxelIndex(this, true);
+    this._voxels = new VoxelIndex(this, isDragMode);
     this._engine.runRenderLoop(() => {
       this._scene.render();
     });

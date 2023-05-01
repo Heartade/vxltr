@@ -3,7 +3,7 @@
   import type { VoxelIndex } from "$lib/voxels";
   import Toolbox from "./Toolbox.svelte";
   import ColorSelector from "./ColorSelector.svelte";
-  import { tool, colorId, mode } from "./store";
+  import { tool, colorId, mode, drag, showTarget } from "./store";
   import { SceneManager } from "$lib/scene/InitScene";
 
   let canvas: HTMLCanvasElement;
@@ -12,7 +12,8 @@
   let showPalette: boolean = false;
 
   onMount(() => {
-    sceneManager = new SceneManager(canvas);
+    drag.update(() => location.href.includes("group=a"));
+    sceneManager = new SceneManager(canvas, $drag);
     voxels = sceneManager.voxels;
   });
 
@@ -31,6 +32,16 @@
   $: if ($colorId) {
     if (voxels) {
       voxels.setMaterialId($colorId);
+    }
+  }
+
+  $: if ($showTarget) {
+    if (voxels) {
+      voxels.setShowTarget($showTarget);
+    }
+  } else {
+    if (voxels) {
+      voxels.setShowTarget(false);
     }
   }
 </script>

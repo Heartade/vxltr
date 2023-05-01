@@ -18,7 +18,7 @@ export class Wall {
     this._parent = parent;
     this._mesh = BABYLON.MeshBuilder.CreatePlane(
       this._id,
-      { size: MAP_SIZE - 0.1, sideOrientation: BABYLON.Mesh.FRONTSIDE },
+      { size: MAP_SIZE, sideOrientation: BABYLON.Mesh.FRONTSIDE },
       this._parent.scene
     );
     this._mesh.position = position;
@@ -40,8 +40,8 @@ export class Wall {
         camera_pos_relative_to_mesh,
         BABYLON.Vector3.Up()
       );
+      this._mesh.isPickable = Math.abs(angle) >= Math.PI / 2;
       if (this._parent.isDragEnabled) {
-        this._mesh.isPickable = Math.abs(angle) >= Math.PI / 2;
       }
     });
   }
