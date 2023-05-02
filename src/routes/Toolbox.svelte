@@ -90,7 +90,7 @@
         name={"↪"}
       />
     </div>
-    <div class="flex flex-row gap-1">
+    <!-- <div class="flex flex-row gap-1">
       <TargetButton
         selected={$showTarget}
         on:click={() => {
@@ -98,7 +98,7 @@
         }}
         name={$showTarget ? "HIDE TARGET" : "SHOW TARGET"}
       />
-    </div>
+    </div> -->
   </div>
 </header>
 
