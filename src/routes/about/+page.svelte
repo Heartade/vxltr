@@ -16,10 +16,7 @@
   import { goto } from "$app/navigation";
 
   onMount(() => {
-    dragInit.update((v) => {
-      if (!v) drag.update(() => Math.random() > 0.5);
-      return true;
-    });
+    drag.update(() => Math.random() > 0.5);
   });
 </script>
 
@@ -35,16 +32,25 @@
   <h1 class="text-xl font-bold">About</h1>
   <p>
     Thank you for participating in the UX trial.<br />
-    You will be asked to recreate a voxel model displayed in <b>green</b> using
-    the Vxltr app.<br />
+    Your task is recreating the voxel model displayed in
+    <b class="text-green-700">green</b>
+    using the app.<br />
+    {#if $drag}
+      Drag between points to fill or erase voxels.
+    {:else}
+      <b>POINT</b> mode adds or removes a voxel on the point you touch.
+      <b>FACE</b> mode adds or removes voxels on the surface you touch.
+    {/if}
+    <br />
+    The trial will start when you click the <b>Start Trial</b> button below. It will
+    usually take around 1~2 minutes.
   </p>
   <ToolboxButton
     selected={true}
     disabled={false}
     name="Start Trial"
     on:click={() => {
-      let u = new URL(location.origin)
-      goto(u)
+      location.href = "https://forms.office.com/r/Xy4ea0uzXU";
     }}
   />
 </section>
