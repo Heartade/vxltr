@@ -3,6 +3,7 @@
   import ToolboxButton from "$lib/components/ToolboxButton.svelte";
   import {
     endTimeStamp,
+    drag,
     startTimeStamp,
     addCount,
     removeCount,
@@ -30,7 +31,7 @@
     Please copy the below value and paste it in the feedback form.<br />
     <code>
       <b>
-        {$endTimeStamp -
+        {$drag},{$endTimeStamp -
           $startTimeStamp},{$addCount},{$removeCount},{$undoCount},{$redoCount},{$dragCount},{$touchCount}
       </b>
     </code>
@@ -43,7 +44,7 @@
       name="Copy"
       on:click={() => {
         navigator.clipboard.writeText(
-          `${
+          `${$drag},${
             $endTimeStamp - $startTimeStamp
           },${$addCount},${$removeCount},${$undoCount},${$redoCount},${$dragCount},${$touchCount}`
         );
