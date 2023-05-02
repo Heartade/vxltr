@@ -31,10 +31,12 @@
 <section class="flex grow flex-col p-10">
   <h1 class="text-xl font-bold">About</h1>
   <p>
-    Thank you for participating in the UX trial.<br />
-    Your task is recreating the voxel model displayed in
-    <b class="text-green-700">green</b>
-    using the app.<br />
+    Thank you for participating in the UX trial.<br /><br />
+    <b class="text-lg">
+      Your task is recreating the voxel model displayed in
+      <span class="text-green-700">green</span>
+      using the app.
+    </b><br /><br />
     {#if $drag}
       Drag between points to fill or erase voxels.
     {:else}

@@ -27,15 +27,17 @@
   <p>
     Thank you for participating in the UX trial.<br />
     You finished the trial in <b>{$endTimeStamp - $startTimeStamp}ms</b>.<br />
-    Your feedback is greatly appreciated.<br />
-    Please copy the below value and paste it in the feedback form.<br />
+    Your feedback is greatly appreciated.<br /><br />
+    <b class="text-lg">
+      Please copy the below value and paste it in the feedback form.
+    </b><br /><br />
     <code>
       <b>
         {$drag},{$endTimeStamp -
           $startTimeStamp},{$addCount},{$removeCount},{$undoCount},{$redoCount},{$dragCount},{$touchCount}
       </b>
     </code>
-    <br />
+    <br /><br />
   </p>
   <div class="flex flex-row gap-1">
     <ToolboxButton
