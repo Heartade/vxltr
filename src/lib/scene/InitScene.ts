@@ -39,7 +39,7 @@ export class SceneManager {
       ),
       this._scene
     );
-    this._camera.setPosition(new BABYLON.Vector3(MAP_SIZE * 2, MAP_SIZE * 2, MAP_SIZE * 2));
+    this._camera.setPosition(new BABYLON.Vector3(MAP_SIZE * 2.5, MAP_SIZE * 2.5, MAP_SIZE * 2.5));
     this._camera.attachControl(canvas, true);
     this._light = new BABYLON.HemisphericLight(
       "light",

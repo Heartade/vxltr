@@ -16,7 +16,7 @@
   import { goto } from "$app/navigation";
 
   onMount(() => {
-    drag.update(() => Math.random() > 0.5);
+    drag.update(() => true);
   });
 </script>
 
