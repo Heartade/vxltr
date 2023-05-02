@@ -23,5 +23,6 @@ export let removeCount = writable<number>(0);
 export let undoCount = writable<number>(0);
 export let redoCount = writable<number>(0);
 export let touchCount = writable<number>(0);
+export let isTest = writable<boolean>(false);
 export let dragCount = writable<number>(0);
 export let colorId = writable<number>(11);

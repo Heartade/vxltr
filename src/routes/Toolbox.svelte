@@ -10,6 +10,7 @@
     showTarget,
     hasUndo,
     hasRedo,
+    isTest,
   } from "./store";
   import { createEventDispatcher } from "svelte";
   import BsPlus from "svelte-icons-pack/bs/BsPlus";
@@ -90,15 +91,17 @@
         name={"↪"}
       />
     </div>
-    <!-- <div class="flex flex-row gap-1">
-      <TargetButton
-        selected={$showTarget}
-        on:click={() => {
-          showTarget.update(() => !$showTarget);
-        }}
-        name={$showTarget ? "HIDE TARGET" : "SHOW TARGET"}
-      />
-    </div> -->
+    {#if $isTest}
+      <div class="flex flex-row gap-1">
+        <TargetButton
+          selected={$showTarget}
+          on:click={() => {
+            showTarget.update(() => !$showTarget);
+          }}
+          name={$showTarget ? "HIDE TARGET" : "SHOW TARGET"}
+        />
+      </div>
+    {/if}
   </div>
 </header>
 

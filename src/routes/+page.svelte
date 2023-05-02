@@ -18,6 +18,7 @@
     redoCount,
     dragCount,
     touchCount,
+    isTest
   } from "./store";
   import { SceneManager } from "$lib/scene/InitScene";
   import { goto } from "$app/navigation";
@@ -32,6 +33,9 @@
       return location.href.includes("group=a");
     });
     showTarget.update(() => {
+      return location.href.includes("test=true");
+    });
+    isTest.update(() => {
       return location.href.includes("test=true");
     });
     sceneManager = new SceneManager(canvas, $drag);
