@@ -1,6 +1,4 @@
 <script lang="ts">
-  import Icon from "svelte-icons-pack/Icon.svelte";
-  import AiOutlineNodeExpand from "svelte-icons-pack/ai/AiOutlineNodeExpand";
   import { createEventDispatcher } from "svelte";
 
   export let selected: boolean;

@@ -1,5 +1,4 @@
 <script lang="ts">
-  import Icon from "svelte-icons-pack/Icon.svelte";
   import ToolboxButton from "$lib/components/ToolboxButton.svelte";
   import TargetButton from "$lib/components/TargetButton.svelte";
   import {
