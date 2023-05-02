@@ -13,6 +13,7 @@ import {
   redoCount,
   touchCount,
   dragCount,
+  showTarget,
 } from "../../routes/store";
 import { MAP_SIZE } from "./Config";
 import { Wall } from "./Wall";
@@ -229,12 +230,12 @@ export class VoxelIndex {
     let ret = this._voxels
       .flat(2)
       .every((v) => v.enabled === this.checkVoxelIsInTestModel(v));
-    // if (ret) {
-    //   endTimeStamp.update((v) => {
-    //     if (v === 0) return Date.now();
-    //     else return v;
-    //   });
-    // }
+    if (ret && showTarget) {
+      endTimeStamp.update((v) => {
+        if (v === 0) return Date.now();
+        else return v;
+      });
+    }
     return ret;
   }
 

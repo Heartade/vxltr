@@ -28,6 +28,12 @@
   let showPalette: boolean = false;
 
   onMount(() => {
+    drag.update(() => {
+      return location.href.includes("group=a");
+    });
+    showTarget.update(() => {
+      return location.href.includes("test=true");
+    });
     sceneManager = new SceneManager(canvas, $drag);
     voxels = sceneManager.voxels;
   });
