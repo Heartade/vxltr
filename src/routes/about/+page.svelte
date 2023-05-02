@@ -50,7 +50,8 @@
     disabled={false}
     name="Start Trial"
     on:click={() => {
-      location.href = "https://forms.office.com/r/Xy4ea0uzXU";
+      let u = new URL(location.origin);
+      goto(u);
     }}
   />
 </section>

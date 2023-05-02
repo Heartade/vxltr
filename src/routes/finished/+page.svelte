@@ -57,8 +57,7 @@
       disabled={false}
       name="Proceed to Feedback"
       on:click={() => {
-        let u = new URL(location.origin);
-        goto(u);
+        location.href = "https://forms.office.com/r/Xy4ea0uzXU";
       }}
     />
   </div>
