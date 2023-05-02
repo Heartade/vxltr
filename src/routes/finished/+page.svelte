@@ -47,8 +47,6 @@
             $endTimeStamp - $startTimeStamp
           },${$addCount},${$removeCount},${$undoCount},${$redoCount},${$dragCount},${$touchCount}`
         );
-        let u = new URL(location.origin);
-        goto(u);
         alert("copied");
       }}
     />
