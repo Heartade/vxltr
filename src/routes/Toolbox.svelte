@@ -2,7 +2,16 @@
   import Icon from "svelte-icons-pack/Icon.svelte";
   import ToolboxButton from "$lib/components/ToolboxButton.svelte";
   import TargetButton from "$lib/components/TargetButton.svelte";
-  import { COLORS, colorId, tool, mode, drag, showTarget } from "./store";
+  import {
+    COLORS,
+    colorId,
+    tool,
+    mode,
+    drag,
+    showTarget,
+    hasUndo,
+    hasRedo,
+  } from "./store";
   import { createEventDispatcher } from "svelte";
   import BsPlus from "svelte-icons-pack/bs/BsPlus";
   import BsDash from "svelte-icons-pack/bs/BsDash";
@@ -11,10 +20,10 @@
   const dispatch = createEventDispatcher();
 </script>
 
-<header class="fixed w-full flex flex-row p-2 gap-3 bg-white items-center">
-  <h1 class="text-2xl px-6 font-light self-center">vxltr.</h1>
-  <div class="w-1 self-stretch my-2 bg-gray-200" />
-  <div class="w-full flex flex-wrap flex-row p-2 gap-3 items-center">
+<header class="fixed w-full flex flex-row p-1 gap-2 bg-white items-center">
+  <!-- <h1 class="text-2xl px-6 font-light self-center">vxltr.</h1> -->
+  <!-- <div class="w-1 self-stretch my-2 bg-gray-200" /> -->
+  <div class="w-full flex flex-wrap flex-row p-1 gap-2 items-center">
     <div class="flex flex-row gap-1">
       <ToolboxButton
         selected={$tool === "ADD"}
@@ -65,10 +74,28 @@
       </div>
     {/if}
     <div class="flex flex-row gap-1">
+      <ToolboxButton
+        disabled={!$hasUndo}
+        selected={$hasUndo}
+        on:click={() => {
+          dispatch("undo");
+        }}
+        name={"↩"}
+      />
+      <ToolboxButton
+        disabled={!$hasRedo}
+        selected={$hasRedo}
+        on:click={() => {
+          dispatch("redo");
+        }}
+        name={"↪"}
+      />
+    </div>
+    <div class="flex flex-row gap-1">
       <TargetButton
         selected={$showTarget}
         on:click={() => {
-          showTarget.update(() => !($showTarget));
+          showTarget.update(() => !$showTarget);
         }}
         name={$showTarget ? "HIDE TARGET" : "SHOW TARGET"}
       />

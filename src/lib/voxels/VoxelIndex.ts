@@ -1,6 +1,19 @@
 import { Voxel } from "./Voxel";
 import * as BABYLON from "babylonjs";
-import type { Mode, Tool } from "../../routes/store";
+import {
+  type Mode,
+  type Tool,
+  hasUndo,
+  hasRedo,
+  startTimeStamp,
+  endTimeStamp,
+  addCount,
+  removeCount,
+  undoCount,
+  redoCount,
+  touchCount,
+  dragCount,
+} from "../../routes/store";
 import { MAP_SIZE } from "./Config";
 import { Wall } from "./Wall";
 import type { SceneManager } from "$lib/scene/InitScene";
@@ -141,26 +154,57 @@ export class VoxelIndex {
     }
   }
 
+  _enableList(list: Voxel[]) {
+    list.forEach((v) => {
+      v.setEnabled(true);
+    });
+  }
+
+  _disableList(list: Voxel[]) {
+    list.forEach((v) => {
+      v.setEnabled(false);
+    });
+  }
+
+  enableList(list: Voxel[]) {
+    this.undoStack.push(["ADD", list]);
+    this.redoStack = [];
+    addCount.update((x) => x + 1);
+    hasUndo.update(() => this.undoStack.length > 0);
+    hasRedo.update(() => this.redoStack.length > 0);
+    this._enableList(list);
+  }
+
+  disableList(list: Voxel[]) {
+    this.undoStack.push(["REMOVE", list]);
+    removeCount.update((x) => x + 1);
+    this._disableList(list);
+  }
+
   enableBox(start: BABYLON.Vector3, endExclusive: BABYLON.Vector3) {
+    let list: Voxel[] = [];
     for (let x = Math.floor(start.x); x < Math.floor(endExclusive.x); x++) {
       for (let y = Math.floor(start.y); y < Math.floor(endExclusive.y); y++) {
         for (let z = Math.floor(start.z); z < Math.floor(endExclusive.z); z++) {
           let voxel = this._voxels[x]?.[y]?.[z];
-          if (voxel) voxel.setEnabled(true);
+          if (voxel) list.push(voxel);
         }
       }
     }
+    this.enableList(list);
   }
 
   disableBox(start: BABYLON.Vector3, endExclusive: BABYLON.Vector3) {
+    let list: Voxel[] = [];
     for (let x = Math.floor(start.x); x < Math.floor(endExclusive.x); x++) {
       for (let y = Math.floor(start.y); y < Math.floor(endExclusive.y); y++) {
         for (let z = Math.floor(start.z); z < Math.floor(endExclusive.z); z++) {
           let voxel = this._voxels[x]?.[y]?.[z];
-          if (voxel) voxel.setEnabled(false);
+          if (voxel) list.push(voxel);
         }
       }
     }
+    this.disableList(list);
   }
 
   checkVoxelIsInTestModel(v: Voxel) {
@@ -182,9 +226,16 @@ export class VoxelIndex {
       .flat(2)
       .map((v) => v.enabled === this.checkVoxelIsInTestModel(v));
     console.log(map.filter((v) => v).length, map.length);
-    return this._voxels
+    let ret = this._voxels
       .flat(2)
       .every((v) => v.enabled === this.checkVoxelIsInTestModel(v));
+    if (ret) {
+      endTimeStamp.update((v) => {
+        if (v === 0) return Date.now();
+        else return v;
+      });
+    }
+    return ret;
   }
 
   private _dragInfo: [BABYLON.Vector3, BABYLON.Vector3] | null = null;
@@ -219,6 +270,47 @@ export class VoxelIndex {
     if (this._dragInfo) {
       this._dragMesh?.dispose();
       this._dragMesh = createMesh(this._dragInfo);
+    }
+  }
+
+  private undoStack: [Tool, Voxel[]][] = [];
+  private redoStack: [Tool, Voxel[]][] = [];
+
+  // hasUndo() {
+  //   return this.undoStack.length > 0;
+  // }
+
+  // hasRedo() {
+  //   return this.redoStack.length > 0;
+  // }
+
+  undo() {
+    const undo = this.undoStack.pop();
+    if (undo) {
+      undoCount.update((x) => x + 1);
+      this.redoStack.push(undo);
+      if (undo[0] === "ADD") {
+        this._disableList(undo[1]);
+      } else {
+        this._enableList(undo[1]);
+      }
+      hasUndo.update(() => this.undoStack.length > 0);
+      hasRedo.update(() => this.redoStack.length > 0);
+    }
+  }
+
+  redo() {
+    const redo = this.redoStack.pop();
+    if (redo) {
+      redoCount.update((x) => x + 1);
+      this.undoStack.push(redo);
+      if (redo[0] === "ADD") {
+        this._enableList(redo[1]);
+      } else {
+        this._disableList(redo[1]);
+      }
+      hasUndo.update(() => this.undoStack.length > 0);
+      hasRedo.update(() => this.redoStack.length > 0);
     }
   }
 
@@ -260,6 +352,11 @@ export class VoxelIndex {
       case BABYLON.PointerEventTypes.POINTERUP:
         console.log(this.inputCache[event.pointerId ?? 0]);
         let isTouch = this.inputCache[event.pointerId ?? 0]?.length() < 30;
+        if (isTouch) {
+          touchCount.update((x) => x + 1);
+        } else {
+          dragCount.update((x) => x + 1);
+        }
         this.pointerDown[event.pointerId ?? 0] = false;
         if (this._isDragEnabled) {
           this.materials[this.materialId].opacityTexture = null;
@@ -307,15 +404,32 @@ export class VoxelIndex {
               let voxel = this.findVoxelFromPick(pickInfo);
               if (!voxel) {
                 if (pickedPoint && this.tool == "ADD") {
-                  let pos = VectorUtils.clipVector(
-                    0,
-                    MAP_SIZE - 1,
-                    VectorUtils.roundVector(pickedPoint)
-                  );
-                  let v = this._voxels[pos.x]?.[pos.y]?.[pos.z];
-                  if (v) {
-                    v.setEnabled(true);
-                    v.setMaterial(this.materialId);
+                  if (this.mode == "FACE") {
+                    let arr = pickedPoint.asArray();
+                    let minVal = arr.indexOf(Math.min(...arr));
+                    let maxVal = arr.indexOf(Math.max(...arr));
+                    let startingPoint = [0, 0, 0];
+                    let endPoint = [MAP_SIZE, MAP_SIZE, MAP_SIZE];
+                    if (arr[minVal] < 0) {
+                      endPoint[minVal] = 1;
+                    } else {
+                      startingPoint[maxVal] = MAP_SIZE - 1;
+                    }
+                    this.enableBox(
+                      new BABYLON.Vector3(...startingPoint),
+                      new BABYLON.Vector3(...endPoint)
+                    );
+                  } else {
+                    let pos = VectorUtils.clipVector(
+                      0,
+                      MAP_SIZE - 1,
+                      VectorUtils.roundVector(pickedPoint)
+                    );
+                    let v = this._voxels[pos.x]?.[pos.y]?.[pos.z];
+                    if (v) {
+                      this.enableList([v]);
+                      v.setMaterial(this.materialId);
+                    }
                   }
                 }
               } else {
@@ -335,12 +449,9 @@ export class VoxelIndex {
                         ]?.[pos.z + axis[2]];
                       })(axis)
                     );
-                    add.forEach((v) => {
-                      v.setEnabled(true);
-                      v.setMaterial(this.materialId);
-                    });
+                    this.enableList(add);
                   } else if (this.tool == "REMOVE") {
-                    face.forEach((v) => v.setEnabled(false));
+                    this.disableList(face);
                   } else if (this.tool == "PAINT") {
                     face.forEach((v) => v.setMaterial(this.materialId));
                   }
@@ -518,14 +629,15 @@ export class VoxelIndex {
       mesh.material = testModelMaterial;
       return mesh;
     });
-    if (!isDragEnabled) {
-      this.enableBox(
-        new BABYLON.Vector3(c, c, c),
-        new BABYLON.Vector3(c + 2, c + 2, c + 2)
-      );
-    }
+    // if (!isDragEnabled) {
+    //   this.enableBox(
+    //     new BABYLON.Vector3(c, c, c),
+    //     new BABYLON.Vector3(c + 2, c + 2, c + 2)
+    //   );
+    // }
     this._walls = this._initWalls();
 
     this._scene.onPointerObservable.add(this.onPointer.bind(this));
+    startTimeStamp.update(() => Date.now());
   }
 }
